@@ -1,0 +1,2086 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hart van Zuid — AR Tijdreis App</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* TT First Neue: als het lettertype lokaal beschikbaar is wordt het gebruikt, anders DM Sans */
+@font-face {
+  font-family: 'TT First Neue';
+  src: local('TT First Neue'), local('TTFirstNeue');
+  font-weight: 100 900;
+}
+</style>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  background: #e8eaed;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: 'TT First Neue', 'DM Sans', Arial, sans-serif;
+}
+
+.phone-frame {
+  width: 390px;
+  height: 844px;
+  background: #fff;
+  border-radius: 48px;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.25), 0 0 0 8px #1a1a1a, inset 0 0 0 2px #333;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 34px;
+  background: #1a1a1a;
+  border-radius: 0 0 20px 20px;
+  z-index: 100;
+}
+
+.screen {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== SCHERMEN ===== */
+.view {
+  position: absolute;
+  inset: 0;
+  bottom: 80px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: none;
+  flex-direction: column;
+  background: #f8f9fb;
+  scrollbar-width: none;
+}
+.view::-webkit-scrollbar { display: none; }
+.view.active { display: flex; }
+
+/* Views zonder bottom nav */
+#splash.active, #login.active, #punt-detail.active {
+  bottom: 0;
+}
+
+/* AR chip / badge */
+.ar-scan-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0,109,255,0.2);
+  border: 1.5px solid #006dff;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 30px;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(8px);
+  animation: pulse-ar 2s infinite;
+}
+
+@keyframes pulse-ar {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,109,255,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(0,109,255,0); }
+}
+
+/* AR overlay knop op detail */
+.ar-knop {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #006dff, #001497);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  transition: transform 0.1s;
+}
+.ar-knop:active { transform: scale(0.98); }
+
+/* AR tag op tijdlaag foto */
+.ar-tag {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0,109,255,0.85);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+  backdrop-filter: blur(4px);
+}
+
+/* AR scan animatie ring */
+.ar-scan-ring {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid rgba(0,109,255,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0 auto 8px;
+}
+
+.ar-scan-ring::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: #006dff;
+  animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* AR sectie in detail */
+.ar-sectie {
+  background: linear-gradient(135deg, #050244, #001497);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.ar-sectie-titel {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: white;
+}
+
+.ar-sectie-sub {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.5;
+}
+
+/* Nav AR knop speciaal */
+.nav-btn.nav-ar {
+  background: linear-gradient(135deg, #050244, #006dff);
+  border-radius: 16px;
+  padding: 8px 20px;
+  margin-bottom: 4px;
+}
+.nav-btn.nav-ar .nav-label { color: white; font-weight: 600; }
+#splash {
+  background: linear-gradient(165deg, #050244 0%, #001497 50%, #006dff 100%);
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  padding: 60px 32px 48px;
+}
+
+.splash-top {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.splash-icon {
+  width: 80px;
+  height: 80px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 38px;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.splash-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: white;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.splash-sub {
+  font-size: 14px;
+  color: rgba(255,255,255,0.7);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.splash-badge {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: white;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+
+.splash-bottom {
+  width: 100%;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 16px;
+  background: white;
+  color: #050244;
+  border: none;
+  border-radius: 16px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: transform 0.1s, opacity 0.1s;
+}
+.btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+.btn-secondary {
+  width: 100%;
+  padding: 14px;
+  background: transparent;
+  color: rgba(255,255,255,0.8);
+  border: 1.5px solid rgba(255,255,255,0.3);
+  border-radius: 16px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.btn-secondary:active { transform: scale(0.98); }
+
+/* ===== LOGIN ===== */
+#login {
+  background: white;
+  padding: 0;
+}
+
+.login-header {
+  background: linear-gradient(165deg, #050244, #001497);
+  padding: 80px 32px 40px;
+  text-align: center;
+}
+
+.login-header h2 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 6px;
+}
+
+.login-header p {
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+}
+
+.login-body {
+  padding: 32px 28px;
+  flex: 1;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+  display: block;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px solid #e8eaed;
+  border-radius: 12px;
+  font-size: 15px;
+  color: #1a1a1a;
+  background: #f8f9fb;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.form-input:focus { border-color: #001497; background: white; }
+
+.btn-login {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #050244, #001497);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  margin-bottom: 16px;
+  transition: transform 0.1s;
+}
+.btn-login:active { transform: scale(0.98); }
+
+.login-or {
+  text-align: center;
+  color: #aaa;
+  font-size: 13px;
+  margin: 16px 0;
+  position: relative;
+}
+.login-or::before, .login-or::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 38%;
+  height: 1px;
+  background: #e8eaed;
+}
+.login-or::before { left: 0; }
+.login-or::after { right: 0; }
+
+.btn-guest {
+  width: 100%;
+  padding: 14px;
+  background: white;
+  color: #001497;
+  border: 1.5px solid #001497;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.btn-guest:active { transform: scale(0.98); }
+
+.login-back {
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+  margin-top: 16px;
+  cursor: pointer;
+  padding: 8px;
+}
+
+/* ===== HOME / DASHBOARD ===== */
+#home {
+  background: #f8f9fb;
+}
+
+.home-header {
+  background: linear-gradient(165deg, #050244, #001497);
+  padding: 52px 24px 24px;
+  position: relative;
+}
+
+.home-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.home-greeting {
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 2px;
+}
+
+.home-name {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: white;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+}
+
+/* Score kaart */
+.score-card {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.score-main {
+  flex: 1;
+}
+
+.score-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.score-number {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+}
+
+.score-sub {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  margin-top: 2px;
+}
+
+.score-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.badge-count {
+  background: #006dff;
+  color: #050244;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.progress-ring {
+  width: 56px;
+  height: 56px;
+  position: relative;
+}
+
+.progress-ring svg {
+  transform: rotate(-90deg);
+}
+
+.progress-ring .bg { fill: none; stroke: rgba(255,255,255,0.15); stroke-width: 4; }
+.progress-ring .fg { fill: none; stroke: #006dff; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 138; stroke-dashoffset: 110; }
+
+.progress-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+}
+
+/* Home body */
+.home-body {
+  padding: 20px 20px 100px;
+}
+
+.section-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 12px;
+}
+
+/* Badges sectie */
+.badges-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+.badges-row::-webkit-scrollbar { display: none; }
+
+.badge-item {
+  flex-shrink: 0;
+  background: white;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border: 1.5px solid #e8eaed;
+  min-width: 72px;
+}
+
+.badge-item.earned {
+  border-color: #001497;
+  background: #f0f4ff;
+}
+
+.badge-item.locked {
+  opacity: 0.5;
+}
+
+.badge-emoji { font-size: 24px; }
+.badge-name { font-size: 9px; color: #666; text-align: center; font-weight: 500; }
+.badge-item.earned .badge-name { color: #050244; }
+
+/* Route punten lijst */
+.route-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.route-item {
+  background: white;
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1.5px solid #e8eaed;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.route-item:active { transform: scale(0.99); }
+.route-item.visited { border-color: #001497; }
+.route-item.locked-item { opacity: 0.5; }
+
+.route-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #f0f4ff;
+  border: 1.5px solid #006dff55;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #050244;
+  flex-shrink: 0;
+}
+
+.route-item.visited .route-num {
+  background: #001497;
+  border-color: #001497;
+  color: white;
+}
+
+.route-item.locked-item .route-num {
+  background: #f0f0f0;
+  border-color: #ddd;
+  color: #999;
+}
+
+.route-info { flex: 1; }
+.route-name {
+  font-weight: 500;
+  font-size: 14px;
+  color: #1a1a1a;
+  margin-bottom: 2px;
+}
+.route-desc {
+  font-size: 12px;
+  color: #999;
+}
+
+.route-status {
+  font-size: 16px;
+}
+
+/* ===== KAART VIEW ===== */
+#kaart {
+  background: #f8f9fb;
+}
+
+.kaart-header {
+  background: white;
+  padding: 52px 20px 16px;
+  border-bottom: 1px solid #e8eaed;
+}
+
+.kaart-header h2 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.kaart-header p {
+  font-size: 13px;
+  color: #999;
+}
+
+.kaart-map {
+  flex: 1;
+  background: #eef2ff;
+  position: relative;
+  overflow: hidden;
+  min-height: 420px;
+}
+
+/* Nep kaart achtergrond */
+.map-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+/* Straten */
+.street {
+  position: absolute;
+  background: white;
+  opacity: 0.8;
+}
+
+/* Route lijn */
+.route-line {
+  position: absolute;
+  background: #001497;
+  opacity: 0.4;
+}
+
+/* Kaart punten */
+.map-pin {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: transform 0.15s;
+  z-index: 10;
+}
+
+.map-pin:active { transform: scale(1.2); }
+.map-pin.visited { background: #001497; color: white; }
+.map-pin.unvisited { background: white; color: #001497; border-color: #001497; }
+.map-pin.active-pin { background: #D62828; color: white; border-color: #D62828; transform: scale(1.15); }
+
+.map-label {
+  position: absolute;
+  background: white;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 9px;
+  font-weight: 600;
+  color: #1a1a1a;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  white-space: nowrap;
+  z-index: 9;
+  pointer-events: none;
+}
+
+.kaart-legenda {
+  background: white;
+  padding: 14px 20px;
+  display: flex;
+  gap: 16px;
+  border-top: 1px solid #e8eaed;
+}
+
+.legenda-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #666;
+}
+
+.legenda-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* ===== PUNT DETAIL VIEW ===== */
+#punt-detail {
+  background: white;
+}
+
+.detail-header {
+  position: relative;
+  height: 260px;
+  overflow: hidden;
+}
+
+.detail-foto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.detail-foto-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+}
+
+.detail-back {
+  position: absolute;
+  top: 52px;
+  left: 16px;
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  backdrop-filter: blur(8px);
+  border: none;
+  z-index: 10;
+}
+
+.detail-punten-badge {
+  position: absolute;
+  top: 52px;
+  right: 16px;
+  background: #001497;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 20px;
+  z-index: 10;
+}
+
+/* Tijdlijn tabs */
+.tijdlijn-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 20px;
+  border-bottom: 1px solid #e8eaed;
+  background: white;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.tijdlijn-tab {
+  flex: 1;
+  padding: 14px 8px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: #999;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+
+.tijdlijn-tab.active {
+  color: #001497;
+  border-bottom-color: #001497;
+}
+
+/* Tijdlaag content */
+.tijdlaag-content {
+  display: none;
+  padding: 20px 20px 100px;
+  flex-direction: column;
+  gap: 16px;
+}
+.tijdlaag-content.active { display: flex; }
+
+.tijdlaag-foto-groot {
+  width: 100%;
+  height: 200px;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.foto-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  border-radius: 16px;
+}
+
+.fp-vroeger { background: linear-gradient(135deg, #2a1a08, #4a2f0d); }
+.fp-heden { background: linear-gradient(135deg, #050244, #050244); }
+.fp-toekomst { background: linear-gradient(135deg, #050244, #001497); }
+
+.foto-jaar-label {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.detail-punt-naam {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.detail-punt-tag {
+  display: inline-flex;
+  align-items: center;
+  background: #f0f4ff;
+  color: #001497;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid #006dff55;
+}
+
+.detail-tekst {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.7;
+}
+
+.detail-feit {
+  background: #f8f9fb;
+  border-radius: 12px;
+  padding: 14px 16px;
+  border-left: 3px solid #001497;
+}
+
+.detail-feit-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #001497;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 4px;
+}
+
+.detail-feit-tekst {
+  font-size: 13px;
+  color: #444;
+  line-height: 1.5;
+}
+
+.btn-bezoek {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #050244, #001497);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-bezoek:active { transform: scale(0.98); }
+.btn-bezoek.al-bezocht {
+  background: #f0f4ff;
+  color: #001497;
+  border: 1.5px solid #006dff55;
+}
+
+/* ===== PROFIEL VIEW ===== */
+#profiel {
+  background: #f8f9fb;
+}
+
+.profiel-header {
+  background: linear-gradient(165deg, #050244, #001497);
+  padding: 52px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.profiel-avatar {
+  width: 80px;
+  height: 80px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  border: 3px solid rgba(255,255,255,0.4);
+}
+
+.profiel-naam {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: white;
+}
+
+.profiel-sub {
+  font-size: 13px;
+  color: rgba(255,255,255,0.6);
+}
+
+.profiel-stats {
+  display: flex;
+  gap: 0;
+  background: rgba(255,255,255,0.1);
+  border-radius: 16px;
+  overflow: hidden;
+  width: 100%;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.profiel-stat {
+  flex: 1;
+  padding: 14px;
+  text-align: center;
+  border-right: 1px solid rgba(255,255,255,0.15);
+}
+.profiel-stat:last-child { border-right: none; }
+
+.profiel-stat-num {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+}
+
+.profiel-stat-label {
+  font-size: 10px;
+  color: rgba(255,255,255,0.6);
+  margin-top: 2px;
+}
+
+.profiel-body {
+  padding: 20px 20px 100px;
+}
+
+.profiel-sectie {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1.5px solid #e8eaed;
+}
+
+.profiel-sectie-titel {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 14px;
+}
+
+.badges-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.profiel-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.profiel-badge-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.pb-earned { background: #f0f4ff; border: 1.5px solid #006dff55; }
+.pb-locked { background: #f0f0f0; border: 1.5px solid #e0e0e0; opacity: 0.5; filter: grayscale(1); }
+
+.profiel-badge-naam {
+  font-size: 9px;
+  color: #666;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Progress bar */
+.prog-bar-wrap {
+  background: #f0f0f0;
+  border-radius: 8px;
+  height: 8px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.prog-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #050244, #006dff);
+  border-radius: 8px;
+  transition: width 0.5s ease;
+}
+
+.prog-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #999;
+}
+
+/* ===== BOTTOM NAV ===== */
+.bottom-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: white;
+  border-top: 1px solid #e8eaed;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 10px 10px;
+  z-index: 200;
+  box-shadow: 0 -4px 20px rgba(5,2,68,0.08);
+}
+
+.nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: 12px;
+  transition: background 0.15s;
+}
+.nav-btn:active { background: #f0f4ff; }
+
+.nav-icon { font-size: 22px; }
+.nav-label { font-size: 10px; color: #999; font-weight: 500; }
+.nav-btn.active .nav-label { color: #001497; font-weight: 600; }
+.nav-btn.active .nav-icon { filter: none; }
+
+/* Toast notificatie */
+.toast {
+  position: absolute;
+  bottom: 90px;
+  left: 20px;
+  right: 20px;
+  background: #050244;
+  color: white;
+  padding: 14px 16px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 500;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.toast.show { display: flex; }
+.toast-emoji { font-size: 20px; }
+
+/* Overgang animatie */
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.view.active { animation: slideUp 0.25s ease; }
+
+/* Succes popup */
+.succes-popup {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: 40px;
+}
+.succes-popup.show { display: flex; }
+
+.succes-card {
+  background: white;
+  border-radius: 24px;
+  padding: 32px 24px;
+  text-align: center;
+  width: 100%;
+}
+
+.succes-emoji { font-size: 56px; margin-bottom: 16px; }
+
+.succes-titel {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 8px;
+}
+
+.succes-sub {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.succes-punten {
+  background: #f0f4ff;
+  border: 1.5px solid #006dff55;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.succes-punten-num {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #001497;
+}
+
+.succes-punten-label {
+  font-size: 12px;
+  color: #999;
+}
+
+.btn-succes {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #050244, #001497);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+/* Audio knop */
+.audio-knop {
+  width: 100%;
+  padding: 13px 16px;
+  background: #f0f4ff;
+  color: #001497;
+  border: 1.5px solid #001497;
+  border-radius: 14px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+.audio-knop:active { transform: scale(0.98); }
+.audio-knop.audio-actief {
+  background: #001497;
+  color: white;
+  animation: pulse-audio 1.5s infinite;
+}
+@keyframes pulse-audio {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,20,151,0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(0,20,151,0); }
+}
+.winkel-header { background: white; padding: 52px 20px 16px; border-bottom: 1px solid #e8eaed; }
+.winkel-punten-bar { display:flex;align-items:center;gap:8px;background:#f0f4ff;border:1.5px solid #001497;border-radius:12px;padding:10px 14px;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:600;color:#050244;margin-top:10px; }
+.winkel-item { background:white;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;border:1.5px solid #e8eaed; }
+.winkel-item.al-ingewisseld { border-color:#006dff;background:#f0f4ff; }
+.winkel-item.te-duur { opacity:0.5; }
+.winkel-emoji { font-size:28px;flex-shrink:0; }
+.winkel-info { flex:1; }
+.winkel-naam { font-family:'Montserrat',sans-serif;font-size:14px;font-weight:600;color:#050244;margin-bottom:2px; }
+.winkel-korting { font-size:12px;color:#001497;font-weight:500;margin-bottom:2px; }
+.winkel-cat { font-size:10px;color:#999; }
+.winkel-rechts { display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0; }
+.winkel-kosten { font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;color:#050244;background:#f0f4ff;padding:3px 8px;border-radius:8px; }
+.winkel-btn { padding:7px 14px;background:linear-gradient(135deg,#050244,#001497);color:white;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Montserrat',sans-serif;transition:transform 0.1s; }
+.winkel-btn:active { transform:scale(0.96); }
+.winkel-btn-grijs { background:#ccc;cursor:not-allowed; }
+.winkel-badge-ok { background:#006dff;color:white;font-size:11px;font-weight:600;padding:5px 10px;border-radius:10px; }
+</style>
+<body>
+
+<div class="phone-frame">
+  <div class="notch"></div>
+  <div class="screen">
+
+    <!-- ===== SPLASH ===== -->
+    <div class="view active" id="splash">
+      <div class="splash-top">
+        <div class="splash-badge">AR Wandeling · Hengelo</div>
+        <div class="ar-scan-ring">
+          <div style="font-size:32px;">📡</div>
+        </div>
+        <div class="splash-title">Tijdreis<br>Hart van Zuid</div>
+        <div class="splash-sub">Richt je camera op de omgeving en zie hoe Hart van Zuid veranderde door de tijd</div>
+        <div class="ar-scan-chip">📷 AR Tijdreis starten</div>
+      </div>
+      <div class="splash-bottom">
+        <button class="btn-primary" onclick="showView('login')">Begin de tijdreis</button>
+        <button class="btn-secondary" onclick="skipLogin()">Bekijk als gast</button>
+      </div>
+    </div>
+
+    <!-- ===== LOGIN ===== -->
+    <div class="view" id="login">
+      <div class="login-header">
+        <h2>Welkom terug 👋</h2>
+        <p>Log in om je voortgang bij te houden</p>
+      </div>
+      <div class="login-body">
+        <div class="form-group">
+          <label class="form-label">E-mailadres</label>
+          <input class="form-input" type="email" placeholder="jouw@email.nl" value="stijn@saxion.nl">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Wachtwoord</label>
+          <input class="form-input" type="password" placeholder="••••••••" value="wachtwoord">
+        </div>
+        <button class="btn-login" onclick="doLogin()">Inloggen</button>
+        <div class="login-or">of</div>
+        <button class="btn-guest" onclick="skipLogin()">Doorgaan als gast</button>
+        <div class="login-back" onclick="showView('splash')">← Terug</div>
+      </div>
+    </div>
+
+    <!-- ===== HOME ===== -->
+    <div class="view" id="home">
+      <div class="home-header">
+        <div class="home-top-row">
+          <div>
+            <div class="home-greeting">Goedemiddag,</div>
+            <div class="home-name" id="home-naam">Stijn</div>
+          </div>
+          <div class="avatar">🧑</div>
+        </div>
+        <div class="score-card">
+          <div class="score-main">
+            <div class="score-label">Jouw punten</div>
+            <div class="score-number" id="score-display">250</div>
+            <div class="score-sub" id="bezocht-display">3 van 12 punten bezocht</div>
+          </div>
+          <div class="score-badges">
+            <div class="badge-count" id="badge-count">2 badges</div>
+            <div class="progress-ring">
+              <svg width="56" height="56" viewBox="0 0 56 56">
+                <circle class="bg" cx="28" cy="28" r="22"/>
+                <circle class="fg" id="prog-ring" cx="28" cy="28" r="22"/>
+              </svg>
+              <div class="progress-label" id="prog-pct">25%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="home-body">
+        <div class="section-title">Jouw badges</div>
+        <div class="badges-row" id="badges-row">
+          <div class="badge-item earned">
+            <div class="badge-emoji">🏭</div>
+            <div class="badge-name">Pionier</div>
+          </div>
+          <div class="badge-item earned">
+            <div class="badge-emoji">🔍</div>
+            <div class="badge-name">Ontdekker</div>
+          </div>
+          <div class="badge-item locked">
+            <div class="badge-emoji">⚙️</div>
+            <div class="badge-name">Machinist</div>
+          </div>
+          <div class="badge-item locked">
+            <div class="badge-emoji">🏗️</div>
+            <div class="badge-name">Bouwer</div>
+          </div>
+          <div class="badge-item locked">
+            <div class="badge-emoji">🌟</div>
+            <div class="badge-name">Expert</div>
+          </div>
+        </div>
+
+        <div class="section-title">Jouw route</div>
+        <div class="route-list" id="route-list"></div>
+      </div>
+    </div>
+
+    <!-- ===== KAART ===== -->
+    <div class="view" id="kaart">
+      <div class="kaart-header">
+        <h2>Routekaart</h2>
+        <p>Tik op een punt om meer te zien</p>
+      </div>
+
+      <div class="kaart-map" id="kaart-map">
+        <div class="map-bg"></div>
+        <!-- Straten -->
+        <div class="street" style="width:100%;height:12px;top:200px;left:0;opacity:0.6;"></div>
+        <div class="street" style="width:100%;height:8px;top:320px;left:0;opacity:0.5;"></div>
+        <div class="street" style="width:12px;height:100%;top:0;left:130px;opacity:0.5;"></div>
+        <div class="street" style="width:8px;height:100%;top:0;left:250px;opacity:0.4;"></div>
+        <div class="street" style="width:8px;height:100%;top:0;left:330px;opacity:0.4;"></div>
+      </div>
+
+      <div class="kaart-legenda">
+        <div class="legenda-item">
+          <div class="legenda-dot" style="background:#001497;"></div>
+          Bezocht
+        </div>
+        <div class="legenda-item">
+          <div class="legenda-dot" style="background:white;border:2px solid #001497;"></div>
+          Nog te bezoeken
+        </div>
+        <div class="legenda-item">
+          <div class="legenda-dot" style="background:#D62828;"></div>
+          Geselecteerd
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PUNT DETAIL ===== -->
+    <div class="view" id="punt-detail">
+      <div class="detail-header" id="detail-header">
+        <div class="detail-foto-placeholder fp-heden" id="detail-header-foto">🏭</div>
+        <button class="detail-back" onclick="terug()">←</button>
+        <div class="detail-punten-badge" id="detail-punten-badge">+75 punten</div>
+      </div>
+
+      <div class="tijdlijn-tabs">
+        <button class="tijdlijn-tab active" onclick="setTab(0, this)">Vroeger</button>
+        <button class="tijdlijn-tab" onclick="setTab(1, this)">Nu</button>
+        <button class="tijdlijn-tab" onclick="setTab(2, this)">Straks</button>
+      </div>
+
+      <!-- Vroeger -->
+      <div class="tijdlaag-content active" id="tab-0">
+        <div class="tijdlaag-foto-groot">
+          <div class="foto-placeholder fp-vroeger">🏗️</div>
+          <div class="foto-jaar-label" id="vroeger-jaar">± 1902</div>
+          <div class="ar-tag">AR LAAG</div>
+        </div>
+        <div class="detail-punt-naam" id="detail-naam">Punt laden...</div>
+        <div class="detail-punt-tag" id="detail-tag">Industrieel erfgoed</div>
+        <div class="ar-sectie">
+          <div class="ar-scan-ring">
+            <div style="font-size:28px;">📷</div>
+          </div>
+          <div class="ar-sectie-titel">AR Tijdreis actief</div>
+          <div class="ar-sectie-sub">Richt je camera op de locatie om het verleden zichtbaar te maken over de huidige omgeving</div>
+        </div>
+        <button class="audio-knop" id="audio-vroeger"><span>🔊</span> Beluister audiotour</button>
+        <div class="detail-tekst" id="vroeger-tekst">Laden...</div>
+        <div class="detail-feit">
+          <div class="detail-feit-label">Wist je dat?</div>
+          <div class="detail-feit-tekst" id="vroeger-feit">Laden...</div>
+        </div>
+      </div>
+
+      <!-- Nu -->
+      <div class="tijdlaag-content" id="tab-1">
+        <div class="tijdlaag-foto-groot">
+          <div class="foto-placeholder fp-heden">🏫</div>
+          <div class="foto-jaar-label">2026</div>
+          <div class="ar-tag">AR LAAG</div>
+        </div>
+        <button class="audio-knop" id="audio-heden"><span>🔊</span> Beluister audiotour</button>
+        <div class="detail-tekst" id="heden-tekst">Laden...</div>
+        <div class="detail-feit">
+          <div class="detail-feit-label">Op dit moment</div>
+          <div class="detail-feit-tekst" id="heden-feit">Laden...</div>
+        </div>
+        <button class="ar-knop">📷 Bekijk via AR-camera</button>
+        <button class="btn-bezoek" id="btn-bezoek" onclick="markeerBezocht()">
+          ✅ Markeer als bezocht · +75 punten
+        </button>
+      </div>
+
+      <!-- Straks -->
+      <div class="tijdlaag-content" id="tab-2">
+        <div class="tijdlaag-foto-groot">
+          <div class="foto-placeholder fp-toekomst">🔭</div>
+          <div class="foto-jaar-label">2030 →</div>
+          <div class="ar-tag">AR PREVIEW</div>
+        </div>
+        <div class="ar-sectie">
+          <div style="font-size:28px;">🔭</div>
+          <div class="ar-sectie-titel">Toekomst preview</div>
+          <div class="ar-sectie-sub">Zie via AR hoe deze plek er over een paar jaar uitziet</div>
+        </div>
+        <button class="audio-knop" id="audio-toekomst"><span>🔊</span> Beluister audiotour</button>
+        <div class="detail-tekst" id="toekomst-tekst">Laden...</div>
+        <div class="detail-feit">
+          <div class="detail-feit-label">Toekomstplan</div>
+          <div class="detail-feit-tekst" id="toekomst-feit">Laden...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PROFIEL ===== -->
+    <div class="view" id="profiel">
+      <div class="profiel-header">
+        <div class="profiel-avatar">🧑</div>
+        <div class="profiel-naam" id="profiel-naam">Stijn</div>
+        <div class="profiel-sub">Avontuurlijke ontdekker · Hengelo</div>
+        <div class="profiel-stats">
+          <div class="profiel-stat">
+            <div class="profiel-stat-num" id="stat-punten">250</div>
+            <div class="profiel-stat-label">Punten</div>
+          </div>
+          <div class="profiel-stat">
+            <div class="profiel-stat-num" id="stat-bezocht">3</div>
+            <div class="profiel-stat-label">Bezocht</div>
+          </div>
+          <div class="profiel-stat">
+            <div class="profiel-stat-num" id="stat-badges">2</div>
+            <div class="profiel-stat-label">Badges</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="profiel-body">
+        <button onclick="openWinkel()" style="width:100%;padding:16px;background:linear-gradient(135deg,#050244,#001497);color:white;border:none;border-radius:16px;font-family:'Montserrat',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:10px;">
+          🎁 Punten inwisselen voor kortingen
+        </button>
+        <div class="profiel-sectie">
+          <div class="profiel-sectie-titel">Voortgang route</div>
+          <div class="prog-bar-wrap">
+            <div class="prog-bar-fill" id="profiel-prog" style="width:25%"></div>
+          </div>
+          <div class="prog-info">
+            <span id="profiel-prog-tekst">3 van 12 bezocht</span>
+            <span id="profiel-prog-pct">25%</span>
+          </div>
+        </div>
+
+        <div class="profiel-sectie">
+          <div class="profiel-sectie-titel">Jouw badges</div>
+          <div class="badges-grid">
+            <div class="profiel-badge">
+              <div class="profiel-badge-icon pb-earned">🏭</div>
+              <div class="profiel-badge-naam">Pionier</div>
+            </div>
+            <div class="profiel-badge">
+              <div class="profiel-badge-icon pb-earned">🔍</div>
+              <div class="profiel-badge-naam">Ontdekker</div>
+            </div>
+            <div class="profiel-badge">
+              <div class="profiel-badge-icon pb-locked">⚙️</div>
+              <div class="profiel-badge-naam">Machinist</div>
+            </div>
+            <div class="profiel-badge">
+              <div class="profiel-badge-icon pb-locked">🏗️</div>
+              <div class="profiel-badge-naam">Bouwer</div>
+            </div>
+            <div class="profiel-badge">
+              <div class="profiel-badge-icon pb-locked">🌟</div>
+              <div class="profiel-badge-naam">Expert</div>
+            </div>
+            <div class="profiel-badge">
+              <div class="profiel-badge-icon pb-locked">🏆</div>
+              <div class="profiel-badge-naam">Kampioen</div>
+            </div>
+            <div class="profiel-badge">
+              <div class="profiel-badge-icon pb-locked">📸</div>
+              <div class="profiel-badge-naam">Fotograaf</div>
+            </div>
+            <div class="profiel-badge">
+              <div class="profiel-badge-icon pb-locked">🎯</div>
+              <div class="profiel-badge-naam">Volledig</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== WINKEL VIEW ===== -->
+    <div class="view" id="winkel">
+      <div class="winkel-header">
+        <button class="detail-back" onclick="showView('profiel'); setNav('profiel')" style="position:relative;top:0;left:0;background:#f0f4ff;margin-bottom:8px;">←</button>
+        <h2 style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:700;color:#050244;margin-bottom:4px;">Punten inwisselen</h2>
+        <div class="winkel-punten-bar">
+          <span>🏆</span>
+          <span id="winkel-punten">0 punten beschikbaar</span>
+        </div>
+      </div>
+      <div id="winkel-grid" style="padding:16px 16px 100px;display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+
+    <!-- QR Popup -->
+    <div class="succes-popup" id="qr-popup">
+      <div class="succes-card">
+        <div class="succes-emoji" id="qr-winkel-emoji">🥐</div>
+        <div class="succes-titel" id="qr-winkel-naam">Bakker Bart</div>
+        <div class="succes-sub" id="qr-winkel-korting">10% korting op je bestelling</div>
+        <div style="background:#f0f4ff;border-radius:16px;padding:20px;margin:16px 0;">
+          <!-- Nep QR code SVG -->
+          <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto 12px;">
+            <rect width="120" height="120" fill="white" rx="8"/>
+            <rect x="8" y="8" width="40" height="40" fill="#050244" rx="2"/>
+            <rect x="14" y="14" width="28" height="28" fill="white" rx="1"/>
+            <rect x="18" y="18" width="20" height="20" fill="#050244" rx="1"/>
+            <rect x="72" y="8" width="40" height="40" fill="#050244" rx="2"/>
+            <rect x="78" y="14" width="28" height="28" fill="white" rx="1"/>
+            <rect x="82" y="18" width="20" height="20" fill="#050244" rx="1"/>
+            <rect x="8" y="72" width="40" height="40" fill="#050244" rx="2"/>
+            <rect x="14" y="78" width="28" height="28" fill="white" rx="1"/>
+            <rect x="18" y="82" width="20" height="20" fill="#050244" rx="1"/>
+            <rect x="56" y="56" width="8" height="8" fill="#050244"/>
+            <rect x="72" y="56" width="8" height="8" fill="#050244"/>
+            <rect x="88" y="56" width="8" height="8" fill="#050244"/>
+            <rect x="104" y="56" width="8" height="8" fill="#050244"/>
+            <rect x="56" y="72" width="8" height="8" fill="#050244"/>
+            <rect x="56" y="88" width="8" height="8" fill="#050244"/>
+            <rect x="72" y="72" width="8" height="8" fill="#050244"/>
+            <rect x="88" y="88" width="8" height="8" fill="#050244"/>
+            <rect x="104" y="72" width="8" height="8" fill="#050244"/>
+          </svg>
+          <div style="font-size:11px;color:#666;text-align:center;">Toon deze code bij de kassa</div>
+        </div>
+        <button class="btn-succes" onclick="document.getElementById('qr-popup').classList.remove('show')">Sluiten</button>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+      <div class="toast-emoji">✅</div>
+      <div id="toast-tekst">Punt gemarkeerd!</div>
+    </div>
+
+    <!-- Vaste centrale bottom nav -->
+    <nav class="bottom-nav" id="main-nav">
+      <button class="nav-btn active" id="nav-home" onclick="showView('home'); setNav('home')">
+        <div class="nav-icon">🏠</div>
+        <div class="nav-label">Home</div>
+      </button>
+      <button class="nav-btn" id="nav-kaart" onclick="showView('kaart'); setNav('kaart')">
+        <div class="nav-icon">🗺️</div>
+        <div class="nav-label">Kaart</div>
+      </button>
+      <button class="nav-btn nav-ar" id="nav-ar" onclick="showView('home'); setNav('home')">
+        <div class="nav-icon">📷</div>
+        <div class="nav-label">AR Scan</div>
+      </button>
+      <button class="nav-btn" id="nav-profiel" onclick="showView('profiel'); setNav('profiel')">
+        <div class="nav-icon">👤</div>
+        <div class="nav-label">Profiel</div>
+      </button>
+    </nav>
+
+    <!-- Succes popup -->
+    <div class="succes-popup" id="succes-popup">
+      <div class="succes-card">
+        <div class="succes-emoji">🎉</div>
+        <div class="succes-titel" id="succes-titel">Punt bezocht!</div>
+        <div class="succes-sub" id="succes-sub">Je hebt dit punt succesvol afgerond.</div>
+        <div class="succes-punten">
+          <div class="succes-punten-num" id="succes-punten">+75</div>
+          <div class="succes-punten-label">punten verdiend</div>
+        </div>
+        <button class="btn-succes" onclick="sluitSucces()">Doorgaan 🚀</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const PUNTEN_PER_BEZOEK = 75;
+
+const routePunten = [
+  {
+    id: 1, naam: "Hengelo Promotie", tag: "Startpunt",
+    vroeger: { jaar: "Voor 1944", tekst: "Op de Markt stonden vóór de Tweede Wereldoorlog historische panden en statige gebouwen. Het centrum was een levendige mix van dorpsboerderijen en handelspanden.", feit: "Bij de bombardementen van 6 en 7 oktober 1944 werden 485 panden in Hengelo volledig verwoest." },
+    heden: { tekst: "Aan de Markt 8 vind je de Tourist Info van Hengelo Promotie. Dit is jouw startpunt voor de route door Hart van Zuid. Hier zijn wandel- en fietsroutes verkrijgbaar.", feit: "Hengelo Promotie, Stichting Centrummanagement en de marktmeester zijn hier allemaal gevestigd." },
+    toekomst: { tekst: "Hengelo Promotie blijft zich inzetten voor het versterken van het Hengelose profiel, met focus op meer bezoekers die langer in de stad verblijven.", feit: "De binnenstad ontwikkelt zich verder met een compactere winkelstructuur en meer beleving." }
+  },
+  {
+    id: 2, naam: "Station Hengelo", tag: "Rijksmonument",
+    vroeger: { jaar: "1866", tekst: "In 1865 werd de spoorlijn Almelo-Salzbergen officieel geopend, een jaar later was het eerste station van Hengelo gereed. De lijn verbond de fabrieken van Stork met de rest van Nederland.", feit: "Rond 1900 werden maar liefst twaalf spoortunnels aangelegd om het groeiende treinverkeer te verwerken." },
+    heden: { tekst: "Het huidige station is het derde op deze plek, ontworpen door architect H.G.J. Schelling en in 1951 gereedgekomen. De gietijzeren perronoverkapping is een rijksmonument.", feit: "Jaarlijks passeren hier honderdduizenden reizigers met directe verbindingen naar Amsterdam, Zwolle en Berlijn." },
+    toekomst: { tekst: "In 2025 worden nieuwe opstel- en reinigingssporen aangelegd en worden werkzaamheden aan het emplacement afgerond.", feit: "Het stationsgebied vormt de schakel tussen het vernieuwde Marktplein en het transformerende Hart van Zuid." }
+  },
+  {
+    id: 3, naam: "Metropool", tag: "Cultuur",
+    vroeger: { jaar: "± 1900", tekst: "De locatie maakte deel uit van het industriële gebied van Stork en de Koninklijke Machinefabriek. Grote fabriekshallen en spoorverbindingen bepaalden hier jarenlang het straatbeeld.", feit: "Hengelo groeide door de komst van Stork uit tot de bekende 'Metaalstad' van Nederland." },
+    heden: { tekst: "Tegenwoordig is hier Metropool gevestigd: hét poppodium van Twente. Het moderne gebouw biedt ruimte aan concerten, festivals en clubnachten.", feit: "Metropool is een belangrijke ontmoetingsplek voor jongeren en muziekliefhebbers uit heel Oost-Nederland." },
+    toekomst: { tekst: "De voormalige KMS-hal naast Metropool wordt herontwikkeld tot een multifunctionele locatie voor evenementen en stedelijke activiteiten.", feit: "Gebiedsontwikkelaar Trebbe en de gemeente Hengelo werken samen aan de verdere ontwikkeling van deze locatie." }
+  },
+  {
+    id: 4, naam: "Wapen van Hengelo", tag: "Rijksmonument",
+    vroeger: { jaar: "1893", tekst: "Dit gebouw werd in 1893/1894 gebouwd als ontmoetingsplek voor arbeiders van Gebr. Stork & Co ter gelegenheid van het zilveren jubileum van het bedrijf.", feit: "Hier vonden bijeenkomsten, toneelvoorstellingen, feesten en sociale activiteiten voor Stork-werknemers plaats." },
+    heden: { tekst: "Het pand is volledig getransformeerd tot Wapen van Hengelo: een hotel, restaurant, cocktailbar en evenementenlocatie. De historische uitstraling is behouden gebleven.", feit: "Sinds 1999 is het pand een rijksmonument. De restauratie is recent afgerond." },
+    toekomst: { tekst: "Het gebied rondom het Wapen van Hengelo groeit uit tot een moderne stadswijk waarin historie en vernieuwing samenkomen.", feit: "Wapen van Hengelo blijft een belangrijk historisch herkenningspunt binnen het gebied Hart van Zuid." }
+  },
+  {
+    id: 5, naam: "Oud Stork Lab", tag: "Herontwikkeling",
+    vroeger: { jaar: "1963", tekst: "Stork was de eerste fabriek in Nederland met een eigen fysisch laboratorium. In 1963 werd dit gebouw officieel geopend. Hier werd geëxperimenteerd, getest en vernieuwd.", feit: "Het laboratorium was uniek in Nederland: geen enkel ander bedrijf had zo'n geavanceerde onderzoeksfaciliteit in eigen beheer." },
+    heden: { tekst: "Het gebouw staat momenteel leeg, maar krijgt binnenkort een nieuwe toekomst als wooncomplex met de naam LAB074.", feit: "De aangrenzende bedrijfshal wordt gesloopt en maakt plaats voor 41 nieuwbouwappartementen." },
+    toekomst: { tekst: "Het voormalige laboratorium wordt omgebouwd tot elf appartementen. De naam LAB074 verwijst naar het voormalige laboratorium van Stork.", feit: "Straks kun je wonen op de plek waar de Hengelose maakindustrie zijn technologische doorbraken beleefde." }
+  },
+  {
+    id: 6, naam: "De Smelterij", tag: "Wonen",
+    vroeger: { jaar: "± 1910", tekst: "Op deze plek bevond zich de smelterij van Stork, waar metaal werd gesmolten en verwerkt tot machineonderdelen. Het was een van de meest lawaaiige en hete plekken op het terrein.", feit: "Arbeiders werkten hier in extreme omstandigheden, omringd door vloeibaar metaal en intense hitte." },
+    heden: { tekst: "Er zijn appartementen en grondgebonden woningen gebouwd rond groen en met ruimte om te ontmoeten. Sommige woningen hebben een bijzondere tuinkamer boven de berging.", feit: "De tuinkamer boven de berging is een eigentijdse knipoog naar de industriële bouwstijl van vroeger." },
+    toekomst: { tekst: "De Smelterij is al een volledig nieuwe woonwijk. De wijk staat symbool voor hoe industrieel erfgoed kan transformeren naar modern stedelijk wonen.", feit: "De wijk is een voorbeeld van hoe Hart van Zuid als geheel zich de komende jaren verder zal ontwikkelen." }
+  },
+  {
+    id: 9, naam: "Hoofdkantoor Stork", tag: "Historisch",
+    vroeger: { jaar: "1868", tekst: "Op 4 september 1868 opende Charles Theodorus Stork hier machinefabriek Stork & Co. In het begin bouwde Stork stoommachines voor weefgetouwen en spinnerijmachines.", feit: "Op het hoogtepunt werkten er 5.000 medewerkers in Hengelo. Een eeuw lang leidden drie generaties Stork de onderneming." },
+    heden: { tekst: "Het hoofdkantoor staat nu leeg en wacht op een nieuwe toekomst. Het karakteristieke gebouw is een stille getuige van een indrukwekkend industrieel verleden.", feit: "C.T. Stork leende op 13-jarige leeftijd 2.000 gulden van zijn vader om een kleine handweverij te beginnen." },
+    toekomst: { tekst: "Deze karakteristieke en historische plek biedt straks ruimte voor wonen, werken, leren en ontmoeten. Een plek die bruist en inspireert.", feit: "De plannen voor het Stork-hoofdkantoor zijn onderdeel van de bredere herontwikkeling van Hart van Zuid." }
+  },
+  {
+    id: 10, naam: "ROC van Twente", tag: "Onderwijs",
+    vroeger: { jaar: "1902", tekst: "Je staat op een plek waar meer dan honderd jaar geleden gloeiend heet ijzer werd gegoten. Deze gieterij uit 1902 was het kloppende hart van Stork. Grote machines werden hier geproduceerd.", feit: "Het hoogteverschil van het terrein vertelt een verhaal: goederen werden via een eigen spoorsysteem vervoerd." },
+    heden: { tekst: "Vandaag is het een levendige onderwijsplek. De kraanbanen, stalen spanten, originele vensters en lichtstraten herinneren nog duidelijk aan het industriële verleden.", feit: "Als de school geopend is, kun je naar binnen lopen en de originele industriële structuur van dichtbij bekijken." },
+    toekomst: { tekst: "Het ROC van Twente blijft een cruciale partner in Hart van Zuid. Het onderwijs en de industrie zijn hier al meer dan een eeuw met elkaar verbonden.", feit: "De aanwezigheid van het ROC is een van de redenen waarom jongeren dagelijks in Hart van Zuid komen." }
+  },
+  {
+    id: 11, naam: "Brandweerkazerne", tag: "Herbestemming",
+    vroeger: { jaar: "1918", tekst: "Op deze plek stond de modelmakerij van Stork uit 1918. Hier werden houten mallen vervaardigd voor de gieterij. Later werden er ook schoepen voor ventilatoren en wieken voor windmolens gemaakt.", feit: "De bijbehorende watertoren werd al in 1917 gebouwd om het hele Stork-terrein van drinkwater te voorzien." },
+    heden: { tekst: "Binnen het historische skelet ontwierp bureau LKSVDD een nieuwe brandweerkazerne via het 'box-in-box'-principe. De kazerne werd op 11 september 2000 officieel in gebruik genomen.", feit: "De watertoren is sinds 1999 een rijksmonument en werd volledig in het ontwerp geïntegreerd." },
+    toekomst: { tekst: "Na een ingrijpende verbouwing in 2023-2024 staat de kazerne klaar voor de komende decennia, terwijl het industriële erfgoed van Stork zichtbaar blijft.", feit: "De brandweerkazerne is een van de meest aansprekende voorbeelden van geslaagde herbestemming in Hart van Zuid." }
+  },
+  {
+    id: 12, naam: "Het Oude Postkantoor", tag: "Wonen",
+    vroeger: { jaar: "1966", tekst: "In 1966 opende het vijfde postkantoor van Hengelo. Vanuit dit punt werd jarenlang de post voor heel binnenstedelijk Hengelo gesorteerd en verspreid.", feit: "Het complex bestond uit vier verschillende gebouwen met elk een eigen functie: ontvangst, sortering, kantoren en machinekamer." },
+    heden: { tekst: "Het pand heeft de status van gemeentelijk monument. In de ontvangsthal zijn nog altijd originele wandversieringen en een groot wandreliëf van kunstenaar Leo Schatz aanwezig.", feit: "Sinds 2022 wordt het complex getransformeerd tot woonlocatie 'De Post' met 51 woningen." },
+    toekomst: { tekst: "Woningcorporatie Welbions neemt 19 appartementen af voor verhuur, waarvan 18 in de sociale huursector. Zo wordt het complex toegankelijk voor diverse doelgroepen.", feit: "Het oude parkeerterrein verdwijnt en maakt plaats voor terrassen en balkons met een groene binnentuin." }
+  }
+];
+
+// State
+let bezochteIds = new Set([1, 2, 3]);
+let huidigePunt = null;
+let gebruikerNaam = 'Stijn';
+let vorigeView = 'home';
+let audioSpeaking = false;
+let beschikbarePunten = 225; // 3 bezocht * 75
+
+// ===== WINKELS =====
+const winkels = [
+  { id: 1, naam: 'Bakker Bart', emoji: '🥐', korting: '10% korting op je bestelling', kosten: 150, categorie: 'Eten & Drinken' },
+  { id: 2, naam: 'Cafetaria De Markt', emoji: '🍟', korting: '10% korting op je bestelling', kosten: 150, categorie: 'Eten & Drinken' },
+  { id: 3, naam: 'Kapsalon Style', emoji: '✂️', korting: '10% korting op een knipbeurt', kosten: 200, categorie: 'Verzorging' },
+  { id: 4, naam: 'Wapen van Hengelo', emoji: '🍺', korting: '10% korting op je drankje', kosten: 200, categorie: 'Horeca' },
+  { id: 5, naam: 'HEMA Hengelo', emoji: '🛍️', korting: '10% korting op je aankoop', kosten: 175, categorie: 'Winkelen' },
+  { id: 6, naam: 'Metropool', emoji: '🎵', korting: '€2,50 korting op een ticket', kosten: 250, categorie: 'Cultuur' },
+  { id: 7, naam: 'Broodje Bert', emoji: '🥪', korting: '10% korting op je lunch', kosten: 100, categorie: 'Eten & Drinken' },
+  { id: 8, naam: 'Blokker Hengelo', emoji: '🏠', korting: '10% korting op je aankoop', kosten: 175, categorie: 'Winkelen' },
+];
+
+let inwisseldeKortingen = new Set();
+
+function berekenScore() {
+  return bezochteIds.size * PUNTEN_PER_BEZOEK;
+}
+
+// ===== AUDIOTOUR =====
+function getTourTekst(punt, tijdlaag) {
+  const intro = `Je staat nu bij ${punt.naam}. `;
+  if (tijdlaag === 'vroeger') return intro + punt.vroeger.tekst + ' ' + punt.vroeger.feit;
+  if (tijdlaag === 'heden') return intro + punt.heden.tekst + ' ' + punt.heden.feit;
+  return intro + punt.toekomst.tekst + ' ' + punt.toekomst.feit;
+}
+
+function startAudio(tijdlaag) {
+  if (!huidigePunt) return;
+  if (!window.speechSynthesis) { showToast('Audio niet beschikbaar in deze browser'); return; }
+
+  window.speechSynthesis.cancel();
+
+  if (audioSpeaking) {
+    audioSpeaking = false;
+    updateAudioKnop(false);
+    return;
+  }
+
+  const tekst = getTourTekst(huidigePunt, tijdlaag);
+  const utterance = new SpeechSynthesisUtterance(tekst);
+  utterance.lang = 'nl-NL';
+  utterance.rate = 0.88;
+  utterance.pitch = 0.95;
+  utterance.volume = 1;
+
+  // Kies Nederlandse mannenstem als beschikbaar
+  const stemmen = window.speechSynthesis.getVoices();
+  const nlStem = stemmen.find(v => v.lang === 'nl-NL' && v.name.toLowerCase().includes('male'))
+    || stemmen.find(v => v.lang === 'nl-NL')
+    || stemmen.find(v => v.lang.startsWith('nl'));
+  if (nlStem) utterance.voice = nlStem;
+
+  utterance.onstart = () => { audioSpeaking = true; updateAudioKnop(true); };
+  utterance.onend = () => { audioSpeaking = false; updateAudioKnop(false); };
+  utterance.onerror = () => { audioSpeaking = false; updateAudioKnop(false); };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function updateAudioKnop(playing) {
+  document.querySelectorAll('.audio-knop').forEach(k => {
+    k.innerHTML = playing
+      ? '<span>⏹️</span> Stop audiotour'
+      : '<span>🔊</span> Beluister audiotour';
+    k.classList.toggle('audio-actief', playing);
+  });
+}
+
+function stopAudio() {
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  audioSpeaking = false;
+  updateAudioKnop(false);
+}
+
+// ===== PUNTEN WISSELEN =====
+function openWinkel() {
+  beschikbarePunten = berekenScore() - (inwisseldeKortingen.size * 0);
+  renderWinkelView();
+  showView('winkel');
+}
+
+function renderWinkelView() {
+  const punten = berekenScore();
+  document.getElementById('winkel-punten').textContent = punten + ' punten beschikbaar';
+  const grid = document.getElementById('winkel-grid');
+  grid.innerHTML = '';
+
+  winkels.forEach(w => {
+    const al = inwisseldeKortingen.has(w.id);
+    const kanNiet = punten < w.kosten && !al;
+    const div = document.createElement('div');
+    div.className = 'winkel-item' + (al ? ' al-ingewisseld' : '') + (kanNiet ? ' te-duur' : '');
+    div.innerHTML = `
+      <div class="winkel-emoji">${w.emoji}</div>
+      <div class="winkel-info">
+        <div class="winkel-naam">${w.naam}</div>
+        <div class="winkel-korting">${w.korting}</div>
+        <div class="winkel-cat">${w.categorie}</div>
+      </div>
+      <div class="winkel-rechts">
+        ${al
+          ? '<div class="winkel-badge-ok">✓ Actief</div>'
+          : `<div class="winkel-kosten">${w.kosten} pt</div>
+             <button class="winkel-btn${kanNiet ? ' winkel-btn-grijs' : ''}" onclick="inwisselenPunten(${w.id})" ${kanNiet ? 'disabled' : ''}>
+               ${kanNiet ? 'Te weinig' : 'Inwisselen'}
+             </button>`
+        }
+      </div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function inwisselenPunten(winkelId) {
+  const winkel = winkels.find(w => w.id === winkelId);
+  if (!winkel) return;
+  const punten = berekenScore();
+  if (punten < winkel.kosten) return;
+
+  inwisseldeKortingen.add(winkelId);
+
+  // Toon QR popup
+  document.getElementById('qr-winkel-naam').textContent = winkel.naam;
+  document.getElementById('qr-winkel-korting').textContent = winkel.korting;
+  document.getElementById('qr-winkel-emoji').textContent = winkel.emoji;
+  document.getElementById('qr-popup').classList.add('show');
+
+  renderWinkelView();
+}
+
+function updateUI() {
+  const score = berekenScore();
+  const bezocht = bezochteIds.size;
+  const totaal = routePunten.length;
+  const pct = Math.round((bezocht / totaal) * 100);
+
+  document.getElementById('score-display').textContent = score;
+  document.getElementById('bezocht-display').textContent = bezocht + ' van ' + totaal + ' punten bezocht';
+  document.getElementById('stat-punten').textContent = score;
+  document.getElementById('stat-bezocht').textContent = bezocht;
+  document.getElementById('profiel-prog').style.width = pct + '%';
+  document.getElementById('profiel-prog-tekst').textContent = bezocht + ' van ' + totaal + ' bezocht';
+  document.getElementById('profiel-prog-pct').textContent = pct + '%';
+  document.getElementById('prog-pct').textContent = pct + '%';
+
+  const dashOffset = 138 - (138 * pct / 100);
+  document.getElementById('prog-ring').style.strokeDashoffset = dashOffset;
+
+  const badges = bezocht >= 1 ? 1 : 0;
+  const b2 = bezocht >= 3 ? 1 : 0;
+  const b3 = bezocht >= 6 ? 1 : 0;
+  const totalBadges = badges + b2 + b3;
+  document.getElementById('badge-count').textContent = totalBadges + ' badges';
+  document.getElementById('stat-badges').textContent = totalBadges;
+
+  renderRouteList();
+  renderKaartPins();
+}
+
+function renderRouteList() {
+  const container = document.getElementById('route-list');
+  container.innerHTML = '';
+  routePunten.forEach(p => {
+    const visited = bezochteIds.has(p.id);
+    const div = document.createElement('div');
+    div.className = 'route-item' + (visited ? ' visited' : '');
+    div.onclick = () => openPunt(p);
+    div.innerHTML = `
+      <div class="route-num">${visited ? '✓' : p.id}</div>
+      <div class="route-info">
+        <div class="route-naam">${p.naam}</div>
+        <div class="route-desc">${p.tag} · ${visited ? 'Bezocht ✓' : 'Nog te bezoeken'}</div>
+      </div>
+      <div class="route-status">${visited ? '✅' : '→'}</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+const kaartPosities = [
+  { id:1, x:60, y:60 }, { id:2, x:130, y:130 }, { id:3, x:200, y:90 },
+  { id:4, x:160, y:200 }, { id:5, x:280, y:60 }, { id:6, x:310, y:150 },
+  { id:9, x:240, y:270 }, { id:10, x:140, y:330 }, { id:11, x:60, y:280 },
+  { id:12, x:320, y:310 }
+];
+
+let actievePinId = null;
+
+function renderKaartPins() {
+  const map = document.getElementById('kaart-map');
+  map.querySelectorAll('.map-pin, .map-label').forEach(el => el.remove());
+
+  kaartPosities.forEach(pos => {
+    const punt = routePunten.find(p => p.id === pos.id);
+    if (!punt) return;
+    const visited = bezochteIds.has(pos.id);
+    const isActief = actievePinId === pos.id;
+
+    const pin = document.createElement('div');
+    pin.className = 'map-pin ' + (isActief ? 'active-pin' : visited ? 'visited' : 'unvisited');
+    pin.style.left = pos.x + 'px';
+    pin.style.top = pos.y + 'px';
+    pin.style.transform = 'translate(-50%, -50%)' + (isActief ? ' scale(1.15)' : '');
+    pin.textContent = punt.id;
+    pin.onclick = () => {
+      actievePinId = pos.id;
+      renderKaartPins();
+      setTimeout(() => openPunt(punt), 200);
+    };
+    map.appendChild(pin);
+
+    if (isActief) {
+      const label = document.createElement('div');
+      label.className = 'map-label';
+      label.style.left = (pos.x + 18) + 'px';
+      label.style.top = (pos.y - 14) + 'px';
+      label.textContent = punt.naam;
+      map.appendChild(label);
+    }
+  });
+}
+
+function openPunt(punt) {
+  stopAudio();
+  huidigePunt = punt;
+  vorigeView = document.querySelector('.view.active').id;
+
+  document.getElementById('detail-naam').textContent = punt.naam;
+  document.getElementById('detail-tag').textContent = punt.tag;
+  document.getElementById('vroeger-jaar').textContent = punt.vroeger.jaar;
+  document.getElementById('vroeger-tekst').textContent = punt.vroeger.tekst;
+  document.getElementById('vroeger-feit').textContent = punt.vroeger.feit;
+  document.getElementById('heden-tekst').textContent = punt.heden.tekst;
+  document.getElementById('heden-feit').textContent = punt.heden.feit;
+  document.getElementById('toekomst-tekst').textContent = punt.toekomst.tekst;
+  document.getElementById('toekomst-feit').textContent = punt.toekomst.feit;
+  document.getElementById('detail-punten-badge').textContent = '+' + PUNTEN_PER_BEZOEK + ' punten';
+
+  // Audio knoppen tijdlaag-aware
+  document.getElementById('audio-vroeger').onclick = () => startAudio('vroeger');
+  document.getElementById('audio-heden').onclick = () => startAudio('heden');
+  document.getElementById('audio-toekomst').onclick = () => startAudio('toekomst');
+
+  const btn = document.getElementById('btn-bezoek');
+  if (bezochteIds.has(punt.id)) {
+    btn.textContent = '✅ Al bezocht';
+    btn.className = 'btn-bezoek al-bezocht';
+  } else {
+    btn.textContent = '✅ Markeer als bezocht · +' + PUNTEN_PER_BEZOEK + ' punten';
+    btn.className = 'btn-bezoek';
+  }
+
+  setTab(0, document.querySelector('.tijdlijn-tab'));
+  showView('punt-detail');
+}
+
+function setTab(index, btn) {
+  document.querySelectorAll('.tijdlijn-tab').forEach((t, i) => {
+    t.classList.toggle('active', i === index);
+  });
+  document.querySelectorAll('.tijdlaag-content').forEach((c, i) => {
+    c.classList.toggle('active', i === index);
+  });
+}
+
+function markeerBezocht() {
+  if (!huidigePunt || bezochteIds.has(huidigePunt.id)) return;
+  bezochteIds.add(huidigePunt.id);
+
+  document.getElementById('succes-titel').textContent = huidigePunt.naam + ' bezocht!';
+  document.getElementById('succes-sub').textContent = 'Je hebt dit punt van de tijdreis ontdekt. Ga verder naar het volgende punt op de route.';
+  document.getElementById('succes-punten').textContent = '+' + PUNTEN_PER_BEZOEK;
+  document.getElementById('succes-popup').classList.add('show');
+
+  const btn = document.getElementById('btn-bezoek');
+  btn.textContent = '✅ Al bezocht';
+  btn.className = 'btn-bezoek al-bezocht';
+
+  updateUI();
+}
+
+function sluitSucces() {
+  document.getElementById('succes-popup').classList.remove('show');
+}
+
+function terug() {
+  stopAudio();
+  actievePinId = null;
+  showView(vorigeView || 'home');
+  setNav(vorigeView || 'home');
+}
+
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  // Verberg nav op splash, login en punt-detail
+  const nav = document.getElementById('main-nav');
+  if (nav) {
+    nav.style.display = ['splash','login','punt-detail'].includes(id) ? 'none' : 'flex';
+  }
+}
+
+function setNav(id) {
+  ['home','kaart','ar','profiel'].forEach(n => {
+    const btn = document.getElementById('nav-' + n);
+    if (btn) btn.classList.remove('active');
+  });
+  const active = document.getElementById('nav-' + id);
+  if (active) active.classList.add('active');
+}
+
+function showToast(tekst) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-tekst').textContent = tekst;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function doLogin() {
+  gebruikerNaam = 'Stijn';
+  document.getElementById('home-naam').textContent = gebruikerNaam;
+  document.getElementById('profiel-naam').textContent = gebruikerNaam;
+  updateUI();
+  showView('home');
+  setNav('home');
+}
+
+function skipLogin() {
+  gebruikerNaam = 'Gast';
+  document.getElementById('home-naam').textContent = gebruikerNaam;
+  document.getElementById('profiel-naam').textContent = gebruikerNaam;
+  updateUI();
+  showView('home');
+  setNav('home');
+}
+
+// Init
+updateUI();
+renderKaartPins();
+// Nav verbergen op splash
+const nav = document.getElementById('main-nav');
+if (nav) nav.style.display = 'none';
+</script>
+</body>
+</html>
